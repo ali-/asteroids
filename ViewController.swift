@@ -8,7 +8,7 @@ import SceneKit
 class ViewController: UIViewController, SCNSceneRendererDelegate {
 
 	var scene = SCNScene()
-	var playerLocation = 1 // [ LEFT(0), MID(1), RIGHT(2) ]
+	var playerLocation = 1
 	var playerNode = SCNNode()
 	var thrusterNode = SCNNode()
 	var sceneView = SCNView()
@@ -37,16 +37,16 @@ class ViewController: UIViewController, SCNSceneRendererDelegate {
 	}
 
 	func createBullet() {
-		let sphere = SCNCylinder(radius: 1, height: 10)
-		let move = SCNAction.move(by: SCNVector3(0, 0, -300), duration: 0.15)
+		let sphere = SCNPlane(width: 1, height: 10)
+		let move = SCNAction.move(by: SCNVector3(0, 0, -500), duration: 0.25)
 		let material = SCNMaterial()
 		material.diffuse.contents = UIImage(named: Bundle.main.path(forResource: "laser", ofType: "jpg")!)
 		sphere.materials = [material]
 		
 		let bullet = SCNNode(geometry: sphere)
 		scene.rootNode.addChildNode(bullet)
-		bullet.eulerAngles = SCNVector3(90, 0, 0)
-		bullet.position = SCNVector3(playerNode.position.x, playerNode.position.y-10, playerNode.position.z)
+		bullet.eulerAngles = SCNVector3(-45, 0, 0)
+		bullet.position = SCNVector3(playerNode.position.x, playerNode.position.y-2, playerNode.position.z+5)
 		bullet.physicsBody?.isAffectedByGravity = false
 		bullet.runAction(move, completionHandler: {
 			bullet.removeFromParentNode()
@@ -71,11 +71,10 @@ class ViewController: UIViewController, SCNSceneRendererDelegate {
 		cameraNode.camera = SCNCamera()
 		cameraNode.position = SCNVector3(0, 50, 120)
 		cameraNode.eulerAngles = SCNVector3(25, 0, 0)
-		cameraNode.camera?.zFar = 500
+		cameraNode.camera?.zFar = 1000
 		scene.rootNode.addChildNode(cameraNode)
 		
 		// Player
-		//let box = SCNBox(width: 10, height: 10, length: 10, chamferRadius: 0)
 		let ship = SCNScene(named: "ship.dae")!
 		playerNode = ship.rootNode.childNode(withName: "fuselage", recursively: true)!
 		playerNode.position = SCNVector3(0, 0, 0)
@@ -90,7 +89,10 @@ class ViewController: UIViewController, SCNSceneRendererDelegate {
 		particleNode.eulerAngles = SCNVector3(-cameraNode.eulerAngles.x, 0, 0)
 		
 		// Enemies
-		
+		let box = SCNBox(width: 10, height: 10, length: 10, chamferRadius: 0)
+		let enemyNode = SCNNode(geometry: box)
+		enemyNode.position = SCNVector3(0, 0, -300)
+		scene.rootNode.addChildNode(enemyNode)
 		
 		// Setup
 		sceneView.allowsCameraControl = false
@@ -149,4 +151,3 @@ class ViewController: UIViewController, SCNSceneRendererDelegate {
 	}
 	
 }
-
