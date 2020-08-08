@@ -35,23 +35,6 @@ class ViewController: UIViewController, SCNSceneRendererDelegate {
 		doubleTap.numberOfTapsRequired = 2
 		view.addGestureRecognizer(doubleTap)
 	}
-
-	func createBullet() {
-		let sphere = SCNPlane(width: 1, height: 10)
-		let move = SCNAction.move(by: SCNVector3(0, 0, -500), duration: 0.25)
-		let material = SCNMaterial()
-		material.diffuse.contents = UIImage(named: Bundle.main.path(forResource: "laser", ofType: "jpg")!)
-		sphere.materials = [material]
-		
-		let bullet = SCNNode(geometry: sphere)
-		scene.rootNode.addChildNode(bullet)
-		bullet.eulerAngles = SCNVector3(-45, 0, 0)
-		bullet.position = SCNVector3(playerNode.position.x, playerNode.position.y-2, playerNode.position.z+5)
-		bullet.physicsBody?.isAffectedByGravity = false
-		bullet.runAction(move, completionHandler: {
-			bullet.removeFromParentNode()
-		})
-	}
 	
 	func drawScene() {
 		sceneView = SCNView(frame: CGRect(x: 0, y: 0, width: view.frame.width, height: view.frame.height))
@@ -77,6 +60,7 @@ class ViewController: UIViewController, SCNSceneRendererDelegate {
 		// Player
 		let ship = SCNScene(named: "ship.dae")!
 		playerNode = ship.rootNode.childNode(withName: "fuselage", recursively: true)!
+		playerNode.name = "player"
 		playerNode.position = SCNVector3(0, 0, 0)
 		playerNode.eulerAngles = SCNVector3(55, 0, 0)
 		scene.rootNode.addChildNode(playerNode)
@@ -103,15 +87,9 @@ class ViewController: UIViewController, SCNSceneRendererDelegate {
 	func updateHealth() {
 		healthLabel.text = "\(health) HP"
 		switch health {
-			case 2:
-				healthLabel.textColor = .white
-				break
-			case 1:
-				healthLabel.textColor = .systemRed
-				break
-			default:
-				healthLabel.textColor = .systemGreen
-				break
+			case 2: healthLabel.textColor = .white; break
+			case 1: healthLabel.textColor = .systemRed; break
+			default: healthLabel.textColor = .systemGreen; break
 		}
 	}
 	
@@ -119,11 +97,42 @@ class ViewController: UIViewController, SCNSceneRendererDelegate {
 		scoreLabel.text = "Score: \(score)"
 	}
 
+	func createBullet() {
+		let plane = SCNPlane(width: 1, height: 10)
+		let move = SCNAction.move(by: SCNVector3(0, 0, -500), duration: 0.25)
+		let material = SCNMaterial()
+		material.diffuse.contents = UIImage(named: Bundle.main.path(forResource: "laser", ofType: "jpg")!)
+		plane.materials = [material]
+		let laser = SCNNode(geometry: plane)
+		scene.rootNode.addChildNode(laser)
+		laser.eulerAngles = SCNVector3(-45, 0, 0)
+		laser.position = SCNVector3(playerNode.position.x, playerNode.position.y-2, playerNode.position.z+5)
+		laser.physicsBody?.isAffectedByGravity = false
+		laser.runAction(move, completionHandler: {
+			laser.removeFromParentNode()
+		})
+	}
+	
+	func collisionBetween(objA: SCNNode, objB: SCNNode) {
+		if objA.name == "player" {
+			health -= 1;
+			updateHealth()
+			objB.removeFromParentNode()
+		}
+		if objA.name == "laser" {
+			if objB.name == "enemy" {
+				// Check health of enemy
+			}
+			else if objB.name == "asteroid" {
+				score += 1;
+				updateScore()
+				objB.removeFromParentNode()
+			}
+			objA.removeFromParentNode()
+		}
+	}
+
 	@objc func tap() {
-		score += 1
-		if health > 1 { health -= 1 } else { health = 3 }
-		updateHealth()
-		updateScore()
 		createBullet()
 	}
 
