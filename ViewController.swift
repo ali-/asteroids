@@ -5,7 +5,7 @@
 import UIKit
 import SceneKit
 
-class ViewController: UIViewController, SCNSceneRendererDelegate {
+class ViewController: UIViewController, SCNSceneRendererDelegate, SCNPhysicsContactDelegate {
 
 	var scene = SCNScene()
 	var playerLocation = 1
@@ -20,6 +20,7 @@ class ViewController: UIViewController, SCNSceneRendererDelegate {
 	override func viewDidLoad() {
 		super.viewDidLoad()
 		scene = SCNScene(named: "starfield.scn")!
+		scene.physicsWorld.contactDelegate = self
 		view.backgroundColor = .white
 		drawScene()
 		view.addSubview(sceneView)
@@ -34,6 +35,11 @@ class ViewController: UIViewController, SCNSceneRendererDelegate {
 		let doubleTap = UITapGestureRecognizer(target: self, action: #selector(tap))
 		doubleTap.numberOfTapsRequired = 2
 		view.addGestureRecognizer(doubleTap)
+	}
+	
+	func physicsWorld(_ world: SCNPhysicsWorld, didBegin contact: SCNPhysicsContact) {
+		//
+		print("POSITIVE CONTACT")
 	}
 	
 	func drawScene() {
@@ -76,6 +82,12 @@ class ViewController: UIViewController, SCNSceneRendererDelegate {
 		let box = SCNBox(width: 10, height: 10, length: 10, chamferRadius: 0)
 		let enemyNode = SCNNode(geometry: box)
 		enemyNode.position = SCNVector3(0, 0, -300)
+		enemyNode.physicsBody = SCNPhysicsBody(type: .dynamic, shape: SCNPhysicsShape(node: enemyNode))
+		enemyNode.physicsBody?.categoryBitMask = PhysicsObject.enemy.rawValue
+		enemyNode.physicsBody?.collisionBitMask = PhysicsObject.laser.rawValue
+		enemyNode.physicsBody?.contactTestBitMask = PhysicsObject.laser.rawValue
+		enemyNode.physicsBody?.isAffectedByGravity = false
+		enemyNode.physicsBody?.restitution = 1
 		scene.rootNode.addChildNode(enemyNode)
 		
 		// Setup
@@ -98,18 +110,23 @@ class ViewController: UIViewController, SCNSceneRendererDelegate {
 	}
 
 	func createBullet() {
-		let plane = SCNPlane(width: 1, height: 10)
+		let plane = SCNBox(width: 1, height: 1, length: 10, chamferRadius: 0)
 		let move = SCNAction.move(by: SCNVector3(0, 0, -500), duration: 0.25)
 		let material = SCNMaterial()
 		material.diffuse.contents = UIImage(named: Bundle.main.path(forResource: "laser", ofType: "jpg")!)
 		plane.materials = [material]
-		let laser = SCNNode(geometry: plane)
-		scene.rootNode.addChildNode(laser)
-		laser.eulerAngles = SCNVector3(-45, 0, 0)
-		laser.position = SCNVector3(playerNode.position.x, playerNode.position.y-2, playerNode.position.z+5)
-		laser.physicsBody?.isAffectedByGravity = false
-		laser.runAction(move, completionHandler: {
-			laser.removeFromParentNode()
+		let laserNode = SCNNode(geometry: plane)
+		scene.rootNode.addChildNode(laserNode)
+		laserNode.physicsBody = SCNPhysicsBody(type: .dynamic, shape: SCNPhysicsShape(node: laserNode))
+		laserNode.physicsBody?.categoryBitMask = PhysicsObject.laser.rawValue
+		laserNode.physicsBody?.collisionBitMask = PhysicsObject.enemy.rawValue
+		laserNode.physicsBody?.contactTestBitMask = PhysicsObject.enemy.rawValue
+		laserNode.physicsBody?.isAffectedByGravity = false
+		laserNode.physicsBody?.restitution = 1
+		laserNode.eulerAngles = SCNVector3(-65, 0, 0)
+		laserNode.position = SCNVector3(playerNode.position.x, playerNode.position.y-2, playerNode.position.z+5)
+		laserNode.runAction(move, completionHandler: {
+			laserNode.removeFromParentNode()
 		})
 	}
 	
@@ -159,4 +176,11 @@ class ViewController: UIViewController, SCNSceneRendererDelegate {
 		}
 	}
 	
+}
+
+enum PhysicsObject: Int {
+	case player = 1
+	case asteroid = 2
+	case enemy = 4
+	case laser = 8
 }
