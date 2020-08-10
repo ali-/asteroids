@@ -10,6 +10,7 @@ var sceneView: SCNView!
 var playerLocation = 1
 var playerNode: SCNNode!
 var thrusterNode: SCNNode!
+var particleNode: SCNNode!
 var score = 0
 var scoreLabel: UILabel!
 var health = 3
@@ -72,15 +73,16 @@ class ViewController: UIViewController, SCNSceneRendererDelegate, SCNPhysicsCont
 		playerNode.name = "player"
 		playerNode.position = SCNVector3(0, 0, 0)
 		playerNode.eulerAngles = SCNVector3(55, 0, 0)
+		playerNode.physicsBody = SCNPhysicsBody(type: .static, shape: SCNPhysicsShape(node: playerNode))
 		playerNode.physicsBody?.categoryBitMask = PhysicsObject.player.rawValue
-		playerNode.physicsBody?.collisionBitMask = PhysicsObject.asteroid.rawValue | PhysicsObject.enemy.rawValue
-		playerNode.physicsBody?.contactTestBitMask = PhysicsObject.contact.rawValue
+		playerNode.physicsBody?.contactTestBitMask = PhysicsObject.asteroid.rawValue
+		playerNode.physicsBody?.isAffectedByGravity = false
 		thrusterNode = scene.rootNode.childNode(withName: "thruster", recursively: true)!
 		thrusterNode.position = SCNVector3(0, 0, 10)
 		scene.rootNode.addChildNode(playerNode)
 		
 		// Effects
-		let particleNode = scene.rootNode.childNode(withName: "stars", recursively: true)!
+		particleNode = scene.rootNode.childNode(withName: "stars", recursively: true)!
 		particleNode.position = SCNVector3(0, 50, 50)
 		particleNode.eulerAngles = SCNVector3(-cameraNode.eulerAngles.x, 0, 0)
 		
@@ -90,30 +92,43 @@ class ViewController: UIViewController, SCNSceneRendererDelegate, SCNPhysicsCont
 	}
 	
 	func updateHealth() {
-		healthLabel.text = "\(health) HP"
-		switch health {
-			case 2: healthLabel.textColor = .white; break
-			case 1: healthLabel.textColor = .systemRed; break
-			default: healthLabel.textColor = .systemGreen; break
+		DispatchQueue.main.async {
+			healthLabel.text = "\(health) HP"
+			switch health {
+				case 3: healthLabel.textColor = .systemGreen; break
+				case 2: healthLabel.textColor = .white; break
+				default: healthLabel.textColor = .systemRed; break
+			}
 		}
 	}
 	
+	func updateScore() {
+		DispatchQueue.main.async { scoreLabel.text = "Score: \(score)" }
+		particleNode.particleSystems?.first?.speedFactor += 0.1
+	}
+	
 	func createObject(_ position: Int?) {
-		// Enemies
-		let box = SCNBox(width: 10, height: 10, length: 10, chamferRadius: 0)
-		let move = SCNAction.move(by: SCNVector3(0, 0, (800+(score*10))), duration: 5)
-		let enemyNode = ObjectNode()
+		// Asteroid
+		let move = SCNAction.move(by: SCNVector3(Int.random(in: -1...1)*20, 0, (1200+(score*10))), duration: 7)
+		let rotate = SCNAction.rotateBy(x: CGFloat.random(in: 0...360), y: CGFloat.random(in: 0...360), z: CGFloat.random(in: 0...360), duration: 360)
 		let x = position == nil ? Int.random(in: -1...1) : position!
-		enemyNode.geometry = box
-		enemyNode.position = SCNVector3(x*20, 0, -1000+(Int.random(in: -3...3)*20))
-		enemyNode.physicsBody = SCNPhysicsBody(type: .dynamic, shape: SCNPhysicsShape(node: enemyNode))
-		enemyNode.physicsBody?.categoryBitMask = PhysicsObject.enemy.rawValue
-		enemyNode.physicsBody?.contactTestBitMask = PhysicsObject.contact.rawValue
-		enemyNode.physicsBody?.isAffectedByGravity = false
-		enemyNode.name = "enemy"
-		enemyNode.runAction(move, completionHandler: { enemyNode.destroy() })
-		scene.rootNode.addChildNode(enemyNode)
-		var delay = 5.0 + Double.random(in: -1...1) - Double(score/5)
+		let asteroid = SCNScene(named: "asteroid.dae")!
+		let asteroidNode = asteroid.rootNode.childNode(withName: "asteroid", recursively: true)!
+		let material = SCNMaterial()
+		material.diffuse.contents = UIImage(named: Bundle.main.path(forResource: "rock", ofType: "jpg")!)
+		asteroidNode.geometry!.materials = [material]
+		asteroidNode.scale = SCNVector3(7, 7, 7)
+		asteroidNode.eulerAngles = SCNVector3(Int.random(in: 0...360), Int.random(in: 0...360), Int.random(in: 0...360))
+		asteroidNode.position = SCNVector3(x*20, 0, -1000+(Int.random(in: -3...3)*20))
+		asteroidNode.physicsBody = SCNPhysicsBody(type: .static, shape: SCNPhysicsShape(node: asteroidNode))
+		asteroidNode.physicsBody?.categoryBitMask = PhysicsObject.asteroid.rawValue
+		asteroidNode.physicsBody?.contactTestBitMask = PhysicsObject.laser.rawValue | PhysicsObject.asteroid.rawValue
+		asteroidNode.physicsBody?.isAffectedByGravity = false
+		asteroidNode.name = "asteroid"
+		asteroidNode.runAction(rotate)
+		asteroidNode.runAction(move, completionHandler: { asteroidNode.removeFromParentNode() })
+		scene.rootNode.addChildNode(asteroidNode)
+		var delay = 7.0 + Double.random(in: -1...1) - Double(score/5)
 		if delay < 2 { delay = Double.random(in: 1...2) }
 		DispatchQueue.main.asyncAfter(deadline: .now() + delay) { [weak self] in
 			self?.createObject(nil)
@@ -121,19 +136,22 @@ class ViewController: UIViewController, SCNSceneRendererDelegate, SCNPhysicsCont
 	}
 	
 	func physicsWorld(_ world: SCNPhysicsWorld, didBegin contact: SCNPhysicsContact) {
-		score += 1
-		if contact.nodeA.name != "player" {
-			if contact.nodeA.name == "enemy" { (contact.nodeA as? ObjectNode)?.destroy() }
-			else { contact.nodeA.removeFromParentNode() }
+		if contact.nodeA.name == "asteroid" && contact.nodeB.name == "laser" || contact.nodeA.name == "laser" && contact.nodeB.name == "asteroid" {
+			score += 1
+			contact.nodeA.removeFromParentNode()
+			contact.nodeB.removeFromParentNode()
 		}
-		if contact.nodeB.name != "player" {
-			if contact.nodeB.name == "enemy" { (contact.nodeB as? ObjectNode)?.destroy() }
-			else { contact.nodeB.removeFromParentNode() }
+		else {
+			health -= 1
+			if contact.nodeA.name != "player" { contact.nodeA.removeFromParentNode() }
+			if contact.nodeB.name != "player" { contact.nodeB.removeFromParentNode() }
 		}
+		updateScore()
+		updateHealth()
 	}
 
 	@objc func createLaser() {
-		let plane = SCNBox(width: 1, height: 0.1, length: 10, chamferRadius: 0)
+		let plane = SCNBox(width: 1, height: 1, length: 10, chamferRadius: 0)
 		let move = SCNAction.move(by: SCNVector3(0, 0, 0), duration: 0.5)
 		let material = SCNMaterial()
 		material.diffuse.contents = UIImage(named: Bundle.main.path(forResource: "laser", ofType: "jpg")!)
@@ -142,8 +160,7 @@ class ViewController: UIViewController, SCNSceneRendererDelegate, SCNPhysicsCont
 		scene.rootNode.addChildNode(laserNode)
 		laserNode.physicsBody = SCNPhysicsBody(type: .dynamic, shape: SCNPhysicsShape(node: laserNode))
 		laserNode.physicsBody?.categoryBitMask = PhysicsObject.laser.rawValue
-		laserNode.physicsBody?.collisionBitMask = PhysicsObject.asteroid.rawValue | PhysicsObject.enemy.rawValue
-		laserNode.physicsBody?.contactTestBitMask = PhysicsObject.contact.rawValue
+		laserNode.physicsBody?.contactTestBitMask = PhysicsObject.asteroid.rawValue
 		laserNode.physicsBody?.isAffectedByGravity = false
 		laserNode.physicsBody?.applyForce(SCNVector3(0, 0, -300), asImpulse: true)
 		laserNode.position = SCNVector3(playerNode.position.x, playerNode.position.y-0.1, playerNode.position.z+5)
@@ -176,21 +193,8 @@ class ViewController: UIViewController, SCNSceneRendererDelegate, SCNPhysicsCont
 	
 }
 
-func updateScore() {
-	DispatchQueue.main.async { scoreLabel.text = "Score: \(score)" }
-}
-
-class ObjectNode: SCNNode {
-	func destroy() {
-		updateScore()
-		removeFromParentNode()
-	}
-}
-
 enum PhysicsObject: Int {
-	case contact = 1
-	case player = 2
-	case asteroid = 4
-	case enemy = 8
-	case laser = 16
+	case player = 0
+	case laser = 1
+	case asteroid = 2
 }
