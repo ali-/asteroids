@@ -7,19 +7,25 @@ import SceneKit
 
 class ViewController: UIViewController, SCNSceneRendererDelegate, SCNPhysicsContactDelegate {
 
-	var scene = SCNScene()
-	var sceneView = SCNView()
+	var scene: SCNScene!
+	var sceneView: SCNView!
 	var playerLocation = 1
-	var playerNode = SCNNode()
-	var thrusterNode = SCNNode()
+	var playerNode: SCNNode!
+	var thrusterNode: SCNNode!
 	var score = 0
-	var scoreLabel = UILabel()
+	var scoreLabel: UILabel!
 	var health = 3
-	var healthLabel = UILabel()
+	var healthLabel: UILabel!
 	
 	override func viewDidLoad() {
 		super.viewDidLoad()
+		
+		// Scene
 		scene = SCNScene(named: "starfield.scn")!
+		sceneView = SCNView(frame: CGRect(x: 0, y: 0, width: view.frame.width, height: view.frame.height))
+		sceneView.allowsCameraControl = false
+		sceneView.delegate = self
+		sceneView.scene = scene
 		sceneView.scene?.physicsWorld.contactDelegate = self
 		drawScene()
 		view.addSubview(sceneView)
@@ -41,9 +47,6 @@ class ViewController: UIViewController, SCNSceneRendererDelegate, SCNPhysicsCont
 	}
 	
 	func drawScene() {
-		sceneView = SCNView(frame: CGRect(x: 0, y: 0, width: view.frame.width, height: view.frame.height))
-		//sceneView.debugOptions = [SCNDebugOptions.showPhysicsShapes]
-		
 		// GUI
 		healthLabel = UILabel(frame: CGRect(x: 20, y: 40, width: view.frame.width-40, height: 30))
 		healthLabel.text = "\(health) HP"
@@ -68,9 +71,9 @@ class ViewController: UIViewController, SCNSceneRendererDelegate, SCNPhysicsCont
 		playerNode.name = "player"
 		playerNode.position = SCNVector3(0, 0, 0)
 		playerNode.eulerAngles = SCNVector3(55, 0, 0)
-		scene.rootNode.addChildNode(playerNode)
 		thrusterNode = scene.rootNode.childNode(withName: "thruster", recursively: true)!
 		thrusterNode.position = SCNVector3(0, 0, 10)
+		scene.rootNode.addChildNode(playerNode)
 		
 		// Effects
 		let particleNode = scene.rootNode.childNode(withName: "stars", recursively: true)!
@@ -86,11 +89,6 @@ class ViewController: UIViewController, SCNSceneRendererDelegate, SCNPhysicsCont
 		enemyNode.physicsBody?.isAffectedByGravity = false
 		enemyNode.name = "enemy"
 		scene.rootNode.addChildNode(enemyNode)
-		
-		// Setup
-		sceneView.allowsCameraControl = false
-		sceneView.backgroundColor = .white
-		sceneView.scene = scene
 	}
 	
 	func updateHealth() {
