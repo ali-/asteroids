@@ -8,10 +8,10 @@ import SceneKit
 class ViewController: UIViewController, SCNSceneRendererDelegate, SCNPhysicsContactDelegate {
 
 	var scene = SCNScene()
+	var sceneView = SCNView()
 	var playerLocation = 1
 	var playerNode = SCNNode()
 	var thrusterNode = SCNNode()
-	var sceneView = SCNView()
 	var score = 0
 	var scoreLabel = UILabel()
 	var health = 3
@@ -20,8 +20,7 @@ class ViewController: UIViewController, SCNSceneRendererDelegate, SCNPhysicsCont
 	override func viewDidLoad() {
 		super.viewDidLoad()
 		scene = SCNScene(named: "starfield.scn")!
-		scene.physicsWorld.contactDelegate = self
-		view.backgroundColor = .white
+		sceneView.scene?.physicsWorld.contactDelegate = self
 		drawScene()
 		view.addSubview(sceneView)
 		
@@ -38,12 +37,12 @@ class ViewController: UIViewController, SCNSceneRendererDelegate, SCNPhysicsCont
 	}
 	
 	func physicsWorld(_ world: SCNPhysicsWorld, didBegin contact: SCNPhysicsContact) {
-		//
-		print("POSITIVE CONTACT")
+		print("Contact")
 	}
 	
 	func drawScene() {
 		sceneView = SCNView(frame: CGRect(x: 0, y: 0, width: view.frame.width, height: view.frame.height))
+		//sceneView.debugOptions = [SCNDebugOptions.showPhysicsShapes]
 		
 		// GUI
 		healthLabel = UILabel(frame: CGRect(x: 20, y: 40, width: view.frame.width-40, height: 30))
@@ -84,10 +83,8 @@ class ViewController: UIViewController, SCNSceneRendererDelegate, SCNPhysicsCont
 		enemyNode.position = SCNVector3(0, 0, -300)
 		enemyNode.physicsBody = SCNPhysicsBody(type: .dynamic, shape: SCNPhysicsShape(node: enemyNode))
 		enemyNode.physicsBody?.categoryBitMask = PhysicsObject.enemy.rawValue
-		enemyNode.physicsBody?.collisionBitMask = PhysicsObject.laser.rawValue
-		enemyNode.physicsBody?.contactTestBitMask = PhysicsObject.laser.rawValue
 		enemyNode.physicsBody?.isAffectedByGravity = false
-		enemyNode.physicsBody?.restitution = 1
+		enemyNode.name = "enemy"
 		scene.rootNode.addChildNode(enemyNode)
 		
 		// Setup
@@ -110,8 +107,8 @@ class ViewController: UIViewController, SCNSceneRendererDelegate, SCNPhysicsCont
 	}
 
 	func createBullet() {
-		let plane = SCNBox(width: 1, height: 1, length: 10, chamferRadius: 0)
-		let move = SCNAction.move(by: SCNVector3(0, 0, -500), duration: 0.25)
+		let plane = SCNBox(width: 1, height: 0.1, length: 10, chamferRadius: 0)
+		let move = SCNAction.move(by: SCNVector3(0, 0, 0), duration: 0.25)
 		let material = SCNMaterial()
 		material.diffuse.contents = UIImage(named: Bundle.main.path(forResource: "laser", ofType: "jpg")!)
 		plane.materials = [material]
@@ -119,15 +116,13 @@ class ViewController: UIViewController, SCNSceneRendererDelegate, SCNPhysicsCont
 		scene.rootNode.addChildNode(laserNode)
 		laserNode.physicsBody = SCNPhysicsBody(type: .dynamic, shape: SCNPhysicsShape(node: laserNode))
 		laserNode.physicsBody?.categoryBitMask = PhysicsObject.laser.rawValue
-		laserNode.physicsBody?.collisionBitMask = PhysicsObject.enemy.rawValue
-		laserNode.physicsBody?.contactTestBitMask = PhysicsObject.enemy.rawValue
+		laserNode.physicsBody?.collisionBitMask = PhysicsObject.asteroid.rawValue | PhysicsObject.enemy.rawValue
+		laserNode.physicsBody?.contactTestBitMask = PhysicsObject.asteroid.rawValue | PhysicsObject.enemy.rawValue
 		laserNode.physicsBody?.isAffectedByGravity = false
-		laserNode.physicsBody?.restitution = 1
-		laserNode.eulerAngles = SCNVector3(-65, 0, 0)
+		laserNode.physicsBody?.applyForce(SCNVector3(0, 0, -250), asImpulse: true)
 		laserNode.position = SCNVector3(playerNode.position.x, playerNode.position.y-2, playerNode.position.z+5)
-		laserNode.runAction(move, completionHandler: {
-			laserNode.removeFromParentNode()
-		})
+		laserNode.name = "laser"
+		laserNode.runAction(move, completionHandler: { laserNode.removeFromParentNode() })
 	}
 	
 	func collisionBetween(objA: SCNNode, objB: SCNNode) {
