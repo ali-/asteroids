@@ -16,14 +16,12 @@ var scoreLabel: UILabel!
 var health = 3
 var healthLabel: UILabel!
 var debugLabel: UILabel!
-var objectCount = 0
 
 class ViewController: UIViewController, SCNSceneRendererDelegate, SCNPhysicsContactDelegate {
 	
 	override func viewDidLoad() {
-		super.viewDidLoad()
-		
 		// Scene
+		super.viewDidLoad()
 		scene = SCNScene(named: "starfield.scn")!
 		scene.physicsWorld.contactDelegate = self
 		sceneView = SCNView(frame: CGRect(x: 0, y: 0, width: view.frame.width, height: view.frame.height))
@@ -55,9 +53,9 @@ class ViewController: UIViewController, SCNSceneRendererDelegate, SCNPhysicsCont
 		scoreLabel = UILabel(frame: CGRect(x: 20, y: 40, width: view.frame.width-40, height: 30))
 		scoreLabel.text = "Score: \(score)"
 		sceneView.addSubview(scoreLabel)
-		debugLabel = UILabel(frame: CGRect(x: 20, y: 70, width: view.frame.width-40, height: 30))
-		debugLabel.text = ""
-		sceneView.addSubview(debugLabel)
+		//debugLabel = UILabel(frame: CGRect(x: 20, y: 70, width: view.frame.width-40, height: 30))
+		//debugLabel.text = ""
+		//sceneView.addSubview(debugLabel)
 		
 		// Camera
 		let cameraNode = SCNNode()
@@ -86,6 +84,7 @@ class ViewController: UIViewController, SCNSceneRendererDelegate, SCNPhysicsCont
 		particleNode.position = SCNVector3(0, 50, 50)
 		particleNode.eulerAngles = SCNVector3(-cameraNode.eulerAngles.x, 0, 0)
 		
+		// Instantiate
 		createObject(-1)
 		createObject(0)
 		createObject(1)
