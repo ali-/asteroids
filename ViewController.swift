@@ -13,7 +13,7 @@ var thrusterNode: SCNNode!
 var particleNode: SCNNode!
 var score = 0
 var scoreLabel: UILabel!
-var health = 3
+var health = 5
 var healthLabel: UILabel!
 var debugLabel: UILabel!
 
@@ -94,9 +94,9 @@ class ViewController: UIViewController, SCNSceneRendererDelegate, SCNPhysicsCont
 		DispatchQueue.main.async {
 			healthLabel.text = "\(health) HP"
 			switch health {
-				case 3: healthLabel.textColor = .systemGreen; break
-				case 2: healthLabel.textColor = .white; break
-				default: healthLabel.textColor = .systemRed; break
+				case 5: healthLabel.textColor = .systemGreen; break
+				case 1: healthLabel.textColor = .systemRed; break
+				default: healthLabel.textColor = .white; break
 			}
 		}
 	}
